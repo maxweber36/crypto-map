@@ -1,83 +1,90 @@
-'use client'
+"use client";
 
-import { useState, useEffect } from 'react'
-import { TrendingUp, TrendingDown, DollarSign, RefreshCw } from 'lucide-react'
-import { btcApi, BTCPriceData } from '@/services/api'
+import { useState, useEffect } from "react";
+import { TrendingUp, TrendingDown, DollarSign, RefreshCw } from "lucide-react";
+import { btcApi, BTCPriceData } from "@/services/api";
 
 interface PriceCardProps {
-  onPriceUpdate?: (price: number) => void
+  onPriceUpdate?: (price: number) => void;
 }
 
 export default function PriceCard({ onPriceUpdate }: PriceCardProps) {
-  const [priceData, setPriceData] = useState<BTCPriceData | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [lastPrice, setLastPrice] = useState<number | null>(null)
-  const [priceAnimation, setPriceAnimation] = useState<'up' | 'down' | null>(null)
+  const [priceData, setPriceData] = useState<BTCPriceData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [lastPrice, setLastPrice] = useState<number | null>(null);
+  const [priceAnimation, setPriceAnimation] = useState<"up" | "down" | null>(
+    null
+  );
 
   /**
    * 获取当前价格数据
    */
   const fetchPriceData = async () => {
     try {
-      setError(null)
-      const data = await btcApi.getCurrentPrice()
-      
+      setError(null);
+      const data = await btcApi.getCurrentPrice();
+
       // 价格变化动画
       if (lastPrice !== null && data.price !== lastPrice) {
-        setPriceAnimation(data.price > lastPrice ? 'up' : 'down')
-        setTimeout(() => setPriceAnimation(null), 500)
+        setPriceAnimation(data.price > lastPrice ? "up" : "down");
+        setTimeout(() => setPriceAnimation(null), 500);
       }
-      
-      setLastPrice(data.price)
-      setPriceData(data)
-      onPriceUpdate?.(data.price)
+
+      setLastPrice(data.price);
+      setPriceData(data);
+      onPriceUpdate?.(data.price);
     } catch (err) {
-      setError(err instanceof Error ? err.message : '获取数据失败')
+      setError(err instanceof Error ? err.message : "获取数据失败");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   /**
    * 格式化价格显示
    */
   const formatPrice = (price: number): string => {
-    return new Intl.NumberFormat('zh-CN', {
-      style: 'currency',
-      currency: 'USD',
+    return new Intl.NumberFormat("zh-CN", {
+      style: "currency",
+      currency: "USD",
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
-    }).format(price)
-  }
+    }).format(price);
+  };
 
   /**
    * 格式化百分比变化
    */
   const formatPercentage = (change: number): string => {
-    const sign = change >= 0 ? '+' : ''
-    return `${sign}${change.toFixed(2)}%`
-  }
+    const sign = change >= 0 ? "+" : "";
+    return `${sign}${change.toFixed(2)}%`;
+  };
 
   /**
    * 格式化最后更新时间
    */
   const formatLastUpdated = (timestamp: number): string => {
-    const date = new Date(timestamp * 1000)
-    return date.toLocaleString('zh-CN', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-    })
-  }
+    const date = new Date(timestamp * 1000);
+    return date.toLocaleString("zh-CN", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
+  };
 
-  // 初始加载
+  // 初始加载和定时更新
   useEffect(() => {
-    fetchPriceData()
-  }, [])
+    fetchPriceData();
+
+    // 每10分钟自动更新一次数据
+    const interval = setInterval(fetchPriceData, 600000); // 10分钟 = 600000毫秒
+
+    return () => clearInterval(interval);
+  }, []);
 
   if (loading) {
     return (
@@ -91,7 +98,7 @@ export default function PriceCard({ onPriceUpdate }: PriceCardProps) {
           <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-32"></div>
         </div>
       </div>
-    )
+    );
   }
 
   if (error) {
@@ -99,7 +106,9 @@ export default function PriceCard({ onPriceUpdate }: PriceCardProps) {
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
         <div className="text-center">
           <div className="text-red-500 mb-2">⚠️ 数据加载失败</div>
-          <div className="text-sm text-gray-600 dark:text-gray-400 mb-4">{error}</div>
+          <div className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            {error}
+          </div>
           <button
             onClick={fetchPriceData}
             className="px-4 py-2 bg-bitcoin-500 text-white rounded-lg hover:bg-bitcoin-600 transition-colors"
@@ -108,12 +117,12 @@ export default function PriceCard({ onPriceUpdate }: PriceCardProps) {
           </button>
         </div>
       </div>
-    )
+    );
   }
 
-  if (!priceData) return null
+  if (!priceData) return null;
 
-  const isPositiveChange = priceData.change_24h >= 0
+  const isPositiveChange = priceData.change_24h >= 0;
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 transition-all duration-300 hover:shadow-xl">
@@ -128,14 +137,22 @@ export default function PriceCard({ onPriceUpdate }: PriceCardProps) {
         <button
           onClick={fetchPriceData}
           className="p-2 text-gray-500 hover:text-bitcoin-500 transition-colors"
-          title="刷新数据"
+          title="获取最新BTC价格"
         >
           <RefreshCw className="h-5 w-5" />
         </button>
       </div>
 
       {/* 价格显示 */}
-      <div className={`mb-4 ${priceAnimation === 'up' ? 'price-up' : priceAnimation === 'down' ? 'price-down' : ''}`}>
+      <div
+        className={`mb-4 ${
+          priceAnimation === "up"
+            ? "price-up"
+            : priceAnimation === "down"
+            ? "price-down"
+            : ""
+        }`}
+      >
         <div className="text-4xl font-bold text-gray-900 dark:text-white number-animate">
           {formatPrice(priceData.price)}
         </div>
@@ -150,7 +167,7 @@ export default function PriceCard({ onPriceUpdate }: PriceCardProps) {
         )}
         <span
           className={`text-lg font-semibold ${
-            isPositiveChange ? 'text-green-500' : 'text-red-500'
+            isPositiveChange ? "text-green-500" : "text-red-500"
           }`}
         >
           {formatPercentage(priceData.change_24h)}
@@ -165,5 +182,5 @@ export default function PriceCard({ onPriceUpdate }: PriceCardProps) {
         最后更新: {formatLastUpdated(priceData.last_updated)}
       </div>
     </div>
-  )
+  );
 }
